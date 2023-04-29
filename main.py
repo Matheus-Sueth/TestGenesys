@@ -1,19 +1,48 @@
 import yaml
 
+
+funcoes_genesys = {
+    "Length": "len"
+}
+
+
+def usar_funcao_genesys(texto: str):
+    for chave in funcoes_genesys.keys():
+        if chave in texto:
+            texto = f'({texto.replace(chave, funcoes_genesys[chave])})'
+    return texto
+
+
 def trocar_variavel_pelo_valor(texto: str):
     try:
         if texto in objetos_global.keys():
             return objetos_global[texto]
-        elif texto in objetos_tarefa.keys():
+        
+        if texto in objetos_tarefa.keys():
             return objetos_tarefa[texto]
-        else:
-            palavras = texto.split()
+        
+        for chave in objetos_global.keys():
+            if chave in texto:
+                texto = f'({texto.replace(chave, str(objetos_global[chave]))})'
+
+        for chave in objetos_tarefa.keys():
+            if chave in texto:
+                texto = f'({texto.replace(chave, str(objetos_tarefa[chave]))})'
+
+        palavras = texto.split()
+
         for palavra in palavras:
             if palavra in objetos_global.keys():
                 texto = f'({texto.replace(palavra, str(objetos_global[palavra]))})'
+
             if palavra in objetos_tarefa.keys():
                 texto = f'({texto.replace(palavra, str(objetos_tarefa[palavra]))})'
-        return texto
+
+        try:
+            texto = usar_funcao_genesys(texto)
+            texto = eval(texto)
+        finally:
+            return texto
     except Exception as erro:
         raise Exception(f'Erro na função trocar_variavel_pelo_valor: {erro}')
 
@@ -22,7 +51,7 @@ def criar_variaveis(lista_variaveis: list) -> dict:
     objetos = {}
     for variavel in lista_variaveis:
         for valor in variavel.values():
-            objetos[valor['name']] = valor['initialValue']['noValue'] if valor['initialValue'].get('noValue') else valor['initialValue']['lit']
+            objetos[valor['name']] = None if valor['initialValue'].get('noValue') else valor['initialValue']['lit']
     return objetos
 
 
@@ -37,20 +66,20 @@ def quebrar_dicionario(objeto, lista: list):
             for chave, valor in objeto.items():
                 match chave:
                     case 'transferToFlow':
-                        lista.extend(['Transferindo para o fluxo: '+valor['targetFlow']['name']])
+                        print('Transferindo para o fluxo: '+valor['targetFlow']['name'])
                     case 'playAudio':
                         if valor['audio'].get('prompt'):
-                            lista.extend(['Tocou o prompt: '+valor['audio']['prompt']])
+                            print('Tocou o prompt: '+valor['audio']['prompt'])
                         elif valor['audio'].get('tts'):
-                            lista.extend(['Tocou o prompt: '+valor['audio']['tts']])
+                            print('Tocou o prompt: '+valor['audio']['tts'])
                         else:
-                            lista.extend(['Tocou o prompt: '+valor['audio']['exp']])
+                            print('Tocou o prompt: '+valor['audio']['exp'])
                     case 'setParticipantData':
                         if len(valor['attributes']) == 1:
                             atributo_name = valor['attributes'][0]['attribute']['name']['lit']
                             atributo_value = valor['attributes'][0]['attribute']['value']['exp']
                             atributo_value = trocar_variavel_pelo_valor(atributo_value)
-                            lista.extend([f'Atributo {atributo_name} = {atributo_value}'])
+                            print(f'Atributo {atributo_name} = {atributo_value}')
                         else:
                             for atributo in valor['attributes']:
                                 print(atributo)
@@ -61,15 +90,21 @@ def quebrar_dicionario(objeto, lista: list):
                         saida = valor.get('outputs')
                         if saida is None:
                             raise Exception(f'erro decision {name}: {chave} = {valor}, {objeto}')
-                        chave = input(f'condição: {condition} é verdadeira? yes/no ').lower()
+                        match condition:
+                            case True:
+                                chave = 'yes'
+                            case False:
+                                chave = 'no'
+                            case _:
+                                chave = input(f'condição: {condition} é verdadeira? yes/no ').lower()
                         _ , finaliza_loop, proxima_task = quebrar_dicionario(saida[chave]['actions'], lista)
                     case 'disconnect':
                         finaliza_loop = True
-                        lista.extend([valor['name']])
+                        print(valor['name'])
                     case 'jumpToTask':
                         name_task = valor['name']
                         proxima_task = ref_task = valor['targetTaskRef']
-                        lista.extend([f'{name_task} = {ref_task}'])
+                        print(f'{name_task} = {ref_task}\n')
                     case 'updateData':
                         name_data = valor['name']
                         auxiliar = []
@@ -81,21 +116,33 @@ def quebrar_dicionario(objeto, lista: list):
                             if type(valor_var) == str:
                                 valor_var = trocar_variavel_pelo_valor(valor_var)
                             objetos_global[nome_var] = valor_var
-                            lista.extend([f'{name_data} - {nome_var}: {tipo_var} = {valor_var}'])
+                            print(f'{name_data} - {nome_var}: {tipo_var} = {valor_var}')
                     case 'setWrapupCode':
                         wrapup_code = valor['wrapupCode']['lit']['name']
-                        lista.extend([f'wrapup_code = {wrapup_code}'])
+                        print(f'wrapup_code = {wrapup_code}')
                     case 'switch':
                         for case in valor['evaluate']['firstTrue']['cases']:
                             exp = case['case']['value']['exp']
-                            lista.extend([f'case {exp}'])
-                            _ , finaliza_loop, proxima_task = quebrar_dicionario(case['case']['actions'], lista)
+                            condition = trocar_variavel_pelo_valor(exp)
+                            match condition:
+                                case True:
+                                    _ , finaliza_loop, proxima_task = quebrar_dicionario(case['case']['actions'], lista)
+                                    break
+                                case False:
+                                    continue
+                                case _:
+                                    acessar_case = input(f'condição: {condition} é verdadeira? yes/no ').lower()
+                                    if acessar_case == 'yes':
+                                        _ , finaliza_loop, proxima_task = quebrar_dicionario(case['case']['actions'], lista)
+                                        break
+                        else:
+                            _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['evaluate']['firstTrue']['default']['actions'], lista)
                     case 'collectInput':
                         prompt = valor['inputAudio']['prompt'] if valor['inputAudio'].get('prompt') else valor['inputAudio']['tts']
                         print(f'\nTocou o prompt: {prompt}')
                         name_var = valor['inputData']['var']
                         value_var = input(f'Digite a entrada: ')
-                        objetos_global[name_var] = value_var
+                        objetos_global[name_var] = f'"{value_var}"'
                         if value_var != "":
                             _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['outputs']['success']['actions'], lista)
                         else:
@@ -112,7 +159,7 @@ def quebrar_dicionario(objeto, lista: list):
         exit()
 
 
-with open('Testes_Matheus_v2-0.yaml', "r", encoding="utf-8") as arquivo:
+with open('Testes_Matheus_v3-0.yaml', "r", encoding="utf-8") as arquivo:
     data = yaml.safe_load(arquivo)
 
 
