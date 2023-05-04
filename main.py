@@ -1,16 +1,5 @@
 import yaml
-
-
-funcoes_genesys = {
-    "Length": "len"
-}
-
-
-def usar_funcao_genesys(texto: str):
-    for chave in funcoes_genesys.keys():
-        if chave in texto:
-            texto = f'({texto.replace(chave, funcoes_genesys[chave])})'
-    return texto
+from funcoes_genesys import *
 
 
 def trocar_variavel_pelo_valor(texto: str):
@@ -39,12 +28,19 @@ def trocar_variavel_pelo_valor(texto: str):
                 texto = f'({texto.replace(palavra, str(objetos_tarefa[palavra]))})'
 
         try:
-            texto = usar_funcao_genesys(texto)
             texto = eval(texto)
         finally:
             return texto
     except Exception as erro:
         raise Exception(f'Erro na função trocar_variavel_pelo_valor: {erro}')
+
+
+def definir_variavel_global_ou_local(variavel: str, valor: object) -> None:
+    if 'Task' in variavel:
+        objetos_tarefa[variavel] = valor
+    else:
+        objetos_global[variavel] = valor
+    return None
 
 
 def criar_variaveis(lista_variaveis: list) -> dict:
@@ -84,7 +80,7 @@ def quebrar_dicionario(objeto, lista: list):
                             for atributo in valor['attributes']:
                                 print(atributo)
                     case 'decision':
-                        condition = valor['condition']['exp']
+                        condition = valor['condition']['exp']  
                         condition = trocar_variavel_pelo_valor(condition)
                         name = valor['name']
                         saida = valor.get('outputs')
@@ -115,7 +111,7 @@ def quebrar_dicionario(objeto, lista: list):
                         for tipo_var, nome_var, valor_var in auxiliar:
                             if type(valor_var) == str:
                                 valor_var = trocar_variavel_pelo_valor(valor_var)
-                            objetos_global[nome_var] = valor_var
+                            definir_variavel_global_ou_local(nome_var, valor_var)
                             print(f'{name_data} - {nome_var}: {tipo_var} = {valor_var}')
                     case 'setWrapupCode':
                         wrapup_code = valor['wrapupCode']['lit']['name']
@@ -137,16 +133,29 @@ def quebrar_dicionario(objeto, lista: list):
                                         break
                         else:
                             _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['evaluate']['firstTrue']['default']['actions'], lista)
-                    case 'collectInput':
-                        prompt = valor['inputAudio']['prompt'] if valor['inputAudio'].get('prompt') else valor['inputAudio']['tts']
+                    case 'collectInput': 
+                        if valor['inputAudio'].get('prompt'):
+                            prompt = valor['inputAudio']['prompt']
+                        elif valor['inputAudio'].get('tts'):
+                            prompt = valor['inputAudio']['tts']
+                        else:
+                            prompt = valor['inputAudio']['exp']
+                        prompt = trocar_variavel_pelo_valor(prompt)
                         print(f'\nTocou o prompt: {prompt}')
                         name_var = valor['inputData']['var']
                         value_var = input(f'Digite a entrada: ')
-                        objetos_global[name_var] = f'"{value_var}"'
+                        definir_variavel_global_ou_local(name_var, f'"{value_var}"')
                         if value_var != "":
                             _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['outputs']['success']['actions'], lista)
                         else:
                             _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['outputs']['failure']['actions'], lista)
+                    case 'loop':
+                        var_loop = valor['currentIndex']['var']
+                        count_loop = valor['loopCount']['lit']
+                        for index in range(count_loop):
+                            definir_variavel_global_ou_local(var_loop, index)
+                            _ , finaliza_loop, proxima_task = quebrar_dicionario(valor['outputs']['loop']['actions'], lista)
+                            
                     case _:
                         print(chave, valor)
                         if type(valor) == list or type(valor) == dict:
