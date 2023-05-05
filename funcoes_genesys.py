@@ -15,5 +15,19 @@ def randomInt(limit: int) -> int:
     else:
         return random.randint(0,limit)
     
+
 def ToString(value) -> str:
     return str(value)
+
+
+def AddItem(lista: list, item: object) -> list:
+    lista.append(item)
+    return lista
+
+
+def AudioPlaybackOptions(*args):
+    pass
+
+
+def ToAudio(*args):
+    pass
