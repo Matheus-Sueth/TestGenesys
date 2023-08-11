@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+        <title>Matheus</title>
+        <link rel="stylesheet" href="{{ url_for('static', path='reset.css')}}">
+        <link rel="stylesheet" href="{{ url_for('static', path='template.css')}}">
+        <link rel="stylesheet" href="{{ url_for('static', path=arquivo)}}">
+    </head>
+    <body>
+        <div class="btns-menu">
+            <input id="btn" type="button" onclick="window.location.href = urlIndex" value="Início">
+            {% block botoes %}
+            {% endblock %}
+        </div>
+        {% block conteudo %}
+        {% endblock %}
+    </body>
+    <script>
+        var urlIndex = "{{ url_for('index') }}"
+
+        function exibirMensagens(mensagem){
+            alert(mensagem);
+        }
+
+        window.onload = function(){
+            var mensagem = "{{ mensagem }}";
+            if (mensagem !== ""){
+                exibirMensagens(mensagem)
+            }
+        }
+    </script>
+</html>

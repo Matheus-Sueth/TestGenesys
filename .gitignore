@@ -1,1 +1,4 @@
 venv3.11
+classes/__pycache__
+model/__pycache__
+.env

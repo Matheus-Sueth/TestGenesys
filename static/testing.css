@@ -1,0 +1,27 @@
+.conteudo{
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+}
+
+#div-messages{
+    border: 5px solid darkmagenta;
+    padding: 5%;
+    background-color: white;
+}
+
+#coletarEntrada{
+    margin: 0 auto;
+    width: 74%;
+    padding: 3%;
+    border: 5px solid darkmagenta;
+}
+
+#messages{
+    font-size: 18px;
+    min-height: 10%;
+}
+
+.btn-dados{
+    float: right;
+}

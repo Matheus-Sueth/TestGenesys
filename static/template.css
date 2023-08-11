@@ -1,0 +1,20 @@
+body{
+    background-color: rgb(11, 11, 171);
+}
+
+.btns-menu{
+    margin: 1%;
+}
+
+#btn{
+    background: black;
+    color: white;
+    border-color: darkmagenta;
+    border-width: 5px;
+    border-radius: 20%;
+    font-family: "Arial";
+    font-size: 20px;
+    padding: 1%;
+    width: 15%;
+    cursor: pointer;
+}

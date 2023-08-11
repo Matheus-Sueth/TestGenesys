@@ -1,0 +1,88 @@
+{% extends "template.html" %}
+{% block botoes %}
+<input class="btn-dados" id="btn" type="button" onclick="window.location.href = urlIndex" value="Informações">
+{% endblock %}
+{% block conteudo %}
+<div class="conteudo">
+    <div id="div-messages">
+        <label>Mensagens:</label>
+        <ul id='messages'></ul>
+    </div>
+</div>
+<div class="conteudo">
+    <form action="" onsubmit="sendMessage(event)">
+        <input type="text" id="coletarEntrada"/>
+        <button type="send" id="btn">Enviar</button>
+    </form>
+</div>
+<div class="conteudo">
+    <div id="div-messages">
+        <label>Atributos:</label>
+        <ul id="atributos"></ul>
+    </div>
+</div>
+<div class="conteudo">
+    <div id="div-messages">
+        <label>Transferências:</label>
+        <ul id="transferencias"></ul>
+    </div>
+</div>
+<div class="conteudo">
+    <div id="div-messages">
+        <label>Dados:</label>
+        <ul id="dados"></ul>
+    </div>
+</div>
+<script>
+    var web_socket = new WebSocket("{{ url_for('websocket_endpoint') }}");
+    web_socket.onmessage = function(event) {
+        var messages = document.getElementById('messages')
+        var atributos = document.getElementById('atributos')
+        var transferencias = document.getElementById('transferencias')
+        var dados = document.getElementById('dados')
+        var message = document.createElement('li')
+        const jsonData = JSON.parse(event.data)
+        const chaveJson = Object.keys(jsonData)[0]
+        var content = document.createTextNode(jsonData[chaveJson])
+        switch(chaveJson){
+            case 'setWrapupCode':
+            case 'setParticipantData':
+                message.appendChild(content)
+                atributos.appendChild(message)
+                break
+            case 'getParticipantData':
+            case 'updateData':
+            case 'initializeFlowOutcome':
+            case 'setFlowOutcome':
+            case 'setUUIData':
+                message.appendChild(content)
+                dados.appendChild(message)
+                break
+            case 'jumpToTask':
+            case 'transferToFlow':
+                message.appendChild(content)
+                transferencias.appendChild(message)
+                break
+            case 'prompt-url':
+                var prompt = document.createElement('audio');
+                prompt.setAttribute("src", jsonData[chaveJson]);
+                prompt.setAttribute("controls", "controls");
+                messages.appendChild(prompt);
+                break
+            case 'callData':
+            case 'dataTableLookup':
+                break
+            default:
+                console.log(jsonData)
+                message.appendChild(content)
+                messages.appendChild(message)
+        }
+    };
+    function sendMessage(event) {
+        var input = document.getElementById("coletarEntrada")
+        web_socket.send(input.value)
+        input.value = ''
+        event.preventDefault()
+    }
+</script>
+{% endblock %}

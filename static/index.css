@@ -1,0 +1,30 @@
+.conteudo{
+    max-width: 500px;
+    margin: 100px auto;
+    padding: 20px;
+}
+
+.form-group{
+    margin-top: 10px;
+    display: flex;
+    margin-bottom: 5px;
+    justify-content: center;
+}
+
+.form-group label{
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: white;
+}
+
+.form-group input[type="file"]{
+    width: 90%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.form-group #btn{
+    margin: 100px auto;
+    width: 150px;
+}
